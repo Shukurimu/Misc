@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Sorting Algorithms</title>
+<style>
+body, html {
+width: 98%;
+height: 90%;
+}
+textarea {
+width: 100%;
+font-size: 24px;
+}
+#usrinput {
+height: 30%;
+background-color: Beige;
+}
+#jsoutput {
+height: 50%;
+background-color: Lavender;
+}
+.indent {
+margin-left: 20px;
+}
+label, input {
+font-family: Verdana;
+font-size: 16px;
+margin-bottom: 10px;
+}
+#jsresult {
+margin-top: 0px;
+font-family: Arial;
+font-size: 20px;
+}
+a.nlgn {
+border: 3px solid LimeGreen;
+}
+a.nsqr {
+border: 3px solid Crimson;
+}
+a {
+border-radius: 6px;
+margin-left: 10px;
+padding: 6px 18px;
+cursor: pointer;
+font-size: 20px;
+font-family: Georgia;
+font-weight: 700;
+}
+a:hover {
+background: #CCCCCC;
+color: BlueViolet;
+}
+:not(textarea) {
+user-select: none;
+-ms-user-select: none;
+-moz-user-select: none;
+}
+</style>
+<script>
+"use strict";
+Array.prototype.toIntArray = function () {
+	this.forEach(function(v, i, a) {
+		a[i] = parseInt(v);
+	});
+	return this.length;
+}
+Array.prototype.isOrdered = function () {
+	var current = this[0];
+	for (var i = 1; i < this.length; ++i) {
+		if (current > this[i])
+			return false;
+		current = this[i];
+	}
+	return true;
+}
+Array.prototype.swap = function (i, j) {
+	var tmp = this[i];
+	this[i] = this[j];
+	this[j] = tmp;
+	return;
+}
+Array.prototype.shuffle = function () {
+	var count = this.length;
+	while (--count > 0)
+		this.swap(count, Math.floor(Math.random() * count));
+	return;
+}
+Array.prototype.reverseRange = function (begin, end) {
+	--end;
+	while (begin < end)
+		this.swap(begin++, end--);
+	return;
+}
+Array.prototype.reverse = function () {
+	this.reverseRange(0, this.length);
+	return;
+}
+
+// the whole array is used for easily indexing
+function heapsort(array, count) {
+	function siftDown(a, lo, hi) {
+		var focus = lo;
+		while (focus * 2 < hi) {
+			var index = focus;
+			var child = focus * 2;
+			// check
+			if (a[focus] < a[child])
+				index = child;
+			if ((child + 1 < hi) && (a[index] < a[child + 1]))
+				index = child + 1;
+			// swap
+			if (index == focus)
+				return;
+			else {
+				a.swap(index, focus);
+				focus = index;
+			}
+		}
+		return;
+	}
+	// heapify
+	var curr = Math.floor((count - 1) / 2);
+	while (curr >= 0)
+		siftDown(array, curr--, count);
+	// reorder
+	while (--count > 0) {
+		array.swap(0, count);
+		siftDown(array, 0, count);
+	}
+	return;
+}
+
+function quicksort(array, lo, hi) {
+	if (lo + 1 >= hi)	return;
+	var pv = (function (a, i, j) {
+		var pivot = a[i--];
+		while (true) {
+			while (a[++i] < pivot);
+			while (a[--j] > pivot);
+			if (i >= j)
+				return j;
+			a.swap(i, j);
+		}
+	}) (array, lo, hi) + 1;
+	quicksort(array, lo, pv);
+	quicksort(array, pv, hi);
+	return;
+}
+
+function mergesort(array, lo, hi) {
+	var count = hi - lo;
+	if (count > 2) {
+		var pv = lo + (count >> 1);
+		mergesort(array, lo, pv);
+		mergesort(array, pv, hi);
+		// merge
+		var tmp = new Array(count);
+		var id0 = 0;
+		var id1 = lo;
+		var id2 = pv;
+		while (true) {
+			if (id1 >= pv) {
+				while (id2 < hi)
+					tmp[id0++] = array[id2++];
+				break;
+			}
+			if (id2 >= hi) {
+				while (id1 < pv)
+					tmp[id0++] = array[id1++];
+				break;
+			}
+			tmp[id0++] = (array[id1] < array[id2]) ? array[id1++] : array[id2++];
+		}
+		tmp.forEach(function (val, idx) {
+			array[lo + idx] = val;
+		});
+	} else if (count == 2) {
+		if (array[lo] > array[lo + 1])
+			array.swap(lo, lo + 1);
+	}
+	return;
+}
+
+function bubblesort(array, lo, hi) {
+	for (var i = lo; i < hi; ++i)
+		for (var j = i; j < hi; ++j)
+			if (array[i] > array[j])
+				array.swap(i, j);
+	return;
+}
+
+// items of array[lo:start] are already sorted
+function insertionsort(array, lo, hi, start) {
+	for (var i = start; i < hi; ++i)
+		for (var j = i; (j > lo) && (array[j - 1] > array[j]); --j)
+			array.swap(j, j - 1);
+	return;
+}
+
+function selectionsort(array, lo, hi) {
+	for (var i = lo; i < hi; ++i) {
+		var currValue = array[i];
+		var currIndex = i;
+		for (var j = i + 1; j < hi; ++j) {
+			if (currValue > array[j]) {
+				currValue = array[j];
+				currIndex = j;
+			}
+		}
+		array.swap(i, currIndex);
+	}
+	return;
+}
+
+function timsort(array, lo, hi) {
+	var MINRUN_SIZE = 32;	// 64-Python 32-Java
+	var MIN_GALLOP = 7;
+	var minGallop = MIN_GALLOP;
+	var runStack = [];
+	function gallopRight(key, a, base, len, hint) {
+		var curOfs = 1;
+		var finOfs = 0;
+		if (key < a[base + hint]) {
+			var maxOfs = hint + 1;
+			while ((curOfs < maxOfs) && (key < a[base + hint - curOfs])) {
+				finOfs = curOfs;
+				curOfs = (curOfs << 1) + 1;
+			}
+			if (curOfs > maxOfs)
+				curOfs = maxOfs;
+			var tmpOfs = finOfs;
+			finOfs = hint - curOfs;
+			curOfs = hint - tmpOfs;
+		} else {
+			var maxOfs = len - hint;
+			while ((curOfs < maxOfs) && (key >= a[base + hint + curOfs])) {
+				finOfs = curOfs;
+				curOfs = (curOfs << 1) + 1;
+			}
+			if (curOfs > maxOfs)
+				curOfs = maxOfs;
+			finOfs += hint;
+			curOfs += hint;
+		}
+		++finOfs;
+		while (finOfs < curOfs) {
+			var m = finOfs + ((curOfs - finOfs) >>> 1);
+			if (key < a[base + m])
+				curOfs = m;
+			else
+				finOfs = m + 1;
+		}
+		return curOfs;	// finOfs == curOfs
+	}
+	function gallopLeft(key, a, base, len, hint) {
+		var curOfs = 1;
+		var finOfs = 0;
+		if (key > a[base + hint]) {
+			var maxOfs = len - hint;
+			while ((curOfs < maxOfs) && (key > a[base + hint + curOfs])) {
+				finOfs = curOfs;
+				curOfs = (curOfs << 1) + 1;
+			}
+			if (curOfs > maxOfs)
+				curOfs = maxOfs;
+			finOfs += hint;
+			curOfs += hint;
+		} else {
+			var maxOfs = hint + 1;
+			while ((curOfs < maxOfs) && (key <= a[base + hint - curOfs])) {
+				finOfs = curOfs;
+				curOfs = (curOfs << 1) + 1;
+			}
+			if (curOfs > maxOfs)
+				curOfs = maxOfs;
+			var tmpOfs = finOfs;
+			finOfs = hint - curOfs;
+			curOfs = hint - tmpOfs;
+		}
+		++finOfs;
+		while (finOfs < curOfs) {
+			var m = finOfs + ((curOfs - finOfs) >>> 1);
+			if (key <= a[base + m])
+				curOfs = m;
+			else
+				finOfs = m + 1;
+		}
+		return curOfs;	// finOfs == curOfs
+	}
+	function mergeLo(base1, len1, base2, len2) {
+		var temp = new Array(len1);
+		for (var i = 0; i < len1; ++i)
+			temp[i] = array[base1 + i];
+		var seek1 = 0;	// for temp array
+		var seek2 = base2;
+		var dest = base1;
+		// move the first item in run2
+		array[dest++] = array[seek2++];
+		// simple cases
+		if (--len2 == 0) {
+			for (var i = 0; i < len1; ++i)
+				array[dest++] = temp[seek1 + i];
+			return;
+		}
+		if (len1 == 1) {
+			for (var i = 0; i < len2; ++i)
+				array[dest++] = array[seek2++];
+			array[dest] = temp[0];
+			return;
+		}
+		// complicated galloping mode
+	LOWHILE:
+		while (true) {
+			var count1 = 0;
+			var count2 = 0;
+			do {
+				if (array[seek2] < temp[seek1]) {
+					array[dest++] = array[seek2++];
+					++count2;
+					count1 = 0;
+					if (--len2 == 0)
+						break LOWHILE;
+				} else {
+					array[dest++] = temp[seek1++];
+					++count1;
+					count2 = 0;
+					if (--len1 == 1)
+						break LOWHILE;
+				}
+			} while (count1 + count2 < minGallop);
+			do {
+				count1 = gallopRight(array[seek2], temp, seek1, len1, 0);
+				if (count1 != 0) {
+					for (var i = 0; i < count1; ++i)
+						array[dest++] = temp[seek1++];
+					len1 -= count1;
+					if (len1 < 2)
+						break LOWHILE;
+				}
+				array[dest++] = array[seek2++];
+				if (--len2 == 0)
+					break LOWHILE;
+				
+				count2 = gallopLeft(temp[seek1], array, seek2, len2, 0);
+				if (count2 != 0) {
+					for (var i = 0; i < count2; ++i)
+						array[dest++] = array[seek2++];
+					len2 -= count2;
+					if (len2 < 1)
+						break LOWHILE;
+				}
+				array[dest++] = temp[seek1++];
+				if (--len1 == 1)
+					break LOWHILE;
+				
+				--minGallop;
+			} while ((count1 >= MIN_GALLOP) || (count2 >= MIN_GALLOP));
+			if (minGallop < 0)
+				minGallop = 0;
+			minGallop += 2;
+		}	// end of LOWHILE
+		if (minGallop < 1)
+			minGallop = 1;
+		if (len2 == 0) {
+			for (var i = 0; i < len1; ++i)
+				array[dest++] = temp[seek1++];
+		} else if (len1 == 1) {
+			for (var i = 0; i < len2; ++i)
+				array[dest++] = array[seek2++];
+			array[dest] = temp[seek1];
+		}
+		return;
+	}
+	function mergeHi(base1, len1, base2, len2) {
+		var temp = new Array(len2);
+		for (var i = 0; i < len2; ++i)
+			temp[i] = array[base2 + i];
+		var seek1 = base1 + len1 - 1;
+		var seek2 = len2 - 1;	// for temp array
+		var dest = base2 + len2 - 1;
+		// move the last item in run1
+		array[dest--] = array[seek1--];
+		// simple cases
+		if (--len1 == 0) {
+			for (var i = 0; i < len2; ++i)
+				array[dest--] = temp[seek2 - i];
+			return;
+		}
+		if (len2 == 1) {
+			for (var i = 0; i < len1; ++i)
+				array[dest--] = array[seek1--];
+			array[dest] = temp[0];
+			return;
+		}
+		// complicated galloping mode
+	HIWHILE:
+		while (true) {
+			var count1 = 0;
+			var count2 = 0;
+			do {
+				if (temp[seek2] < array[seek1]) {
+					array[dest--] = array[seek1--];
+					++count1;
+					count2 = 0;
+					if (--len1 == 0)
+						break HIWHILE;
+				} else {
+					array[dest--] = temp[seek2--];
+					++count2;
+					count1 = 0;
+					if (--len2 == 1)
+						break HIWHILE;
+				}
+			} while (count1 + count2 < minGallop);
+			do {
+				count1 = len1 - gallopRight(temp[seek2], array, base1, len1, len1 - 1);
+				if (count1 != 0) {
+					for (var i = 0; i < count1; ++i)
+						array[dest--] = array[seek1--];
+					len1 -= count1;
+					if (len1 < 1)
+						break HIWHILE;
+				}
+				array[dest--] = temp[seek2--];
+				if (--len2 == 1)
+					break HIWHILE;
+				
+				count2 = len2 - gallopLeft(array[seek1], temp, 0, len2, len2 - 1);
+				if (count2 != 0) {
+					for (var i = 0; i < count2; ++i)
+						array[dest--] = temp[seek2--];
+					len2 -= count2;
+					if (len2 < 2)
+						break HIWHILE;
+				}
+				array[dest--] = array[seek1--];
+				if (--len1 == 0)
+					break HIWHILE;
+				
+				--minGallop;
+			} while ((count1 >= MIN_GALLOP) || (count2 >= MIN_GALLOP));
+			if (minGallop < 0)
+				minGallop = 0;
+			minGallop += 2;
+		}	// end of HIWHILE
+		if (minGallop < 1)
+			minGallop = 1;
+		if (len1 == 0) {
+			for (var i = 0; i < len2; ++i)
+				array[dest--] = temp[seek2--];
+		} else if (len2 == 1) {
+			for (var i = 0; i < len1; ++i)
+				array[dest--] = array[seek1--];
+			array[dest] = temp[seek2];
+		}
+		return;
+	}
+	function mergeAt(x) {
+		var base1 = runStack[x].index;
+		var len1 = runStack[x].size;
+		var base2 = runStack[x + 1].index;
+		var len2 = runStack[x + 1].size;
+		runStack[x].size = len1 + len2;
+		if (x == runStack.length - 3)
+			runStack.swap(x + 1, x + 2);
+		runStack.pop();
+		// find items no need to move
+		var k = gallopRight(array[base2], array, base1, len1, 0);
+		base1 += k;
+		len1 -= k;
+		if (len1 == 0)
+			return;
+		len2 = gallopLeft(array[base1 + len1 - 1], array, base2, len2, len2 - 1);
+		if (len2 == 0)
+			return;
+		// merge remaining
+		if (len1 > len2)
+			mergeHi(base1, len1, base2, len2);
+		else
+			mergeLo(base1, len1, base2, len2);
+		return;
+	}
+	function mergeCollapse() {
+		var n;
+		while ((n = runStack.length) > 1) {
+			if ((n > 2) && (runStack[n - 3].size <= runStack[n - 2].size + runStack[n - 1].size)) {
+				mergeAt((runStack[n - 3].size < runStack[n - 1].size) ? (n - 3) : (n - 2));
+			} else if (runStack[n - 2].size <= runStack[n - 1].size) {
+				mergeAt(n - 2);
+			} else	break;
+		}
+		return;
+	}
+	function countOrderedMinrun(start) {
+		var idx = start + 1;
+		if (idx == hi)
+			return 1;
+		if (array[idx++] >= array[start]) {
+			while ((idx < hi) && (array[idx] >= array[idx - 1]))
+				++idx;
+		} else {	// descending order
+			while ((idx < hi) && (array[idx] <  array[idx - 1]))
+				++idx;
+			array.reverseRange(start, idx);
+		}
+		return idx - start;
+	}
+	// start from here
+	var count = hi - lo;
+	if (count < MINRUN_SIZE) {
+		insertionsort(array, lo, hi, lo + countOrderedMinrun(lo));
+		return;
+	}
+	var minrunSize = (function (n) {
+		var r = 0;
+		while (n >= MINRUN_SIZE) {
+			r |= (n & 1);
+			n >>= 1;
+		}
+		return n + r;
+	}) (count);
+	do {
+		var runSize = countOrderedMinrun(lo);
+		if (runSize < minrunSize) {
+			var forceSize = (lo + minrunSize < hi) ? minrunSize : (hi - lo);
+			insertionsort(array, lo, lo + forceSize, lo + runSize);
+			runSize = forceSize;
+		}
+		runStack.push({index:lo, size:runSize});
+		mergeCollapse();
+		lo += runSize;
+	} while (lo < hi);
+	// force merge to one stack
+	var n;
+	while ((n = runStack.length) > 1) {
+		mergeAt(((n > 2) && (runStack[n - 3].size < runStack[n - 1].size)) ? (n - 3) : (n - 2));
+	}
+	return;
+}
+
+function run(method) {
+	var array = document.querySelector("#usrinput").innerHTML.trim().split(/\s+/);
+	var size = array.toIntArray();
+	if (size < 2) {
+		document.querySelector("#jsoutput").innerHTML = array.join(' ');
+		return;
+	}
+	var t0 = performance.now();
+	switch (method) {
+		case 'T':	timsort(array, 0, size);         	break;
+		case 'H':	heapsort(array, size);           	break;
+		case 'Q':	quicksort(array, 0, size);       	break;
+		case 'M':	mergesort(array, 0, size);       	break;
+		case 'B':	bubblesort(array, 0, size);      	break;
+		case 'I':	insertionsort(array, 0, size, 0);	break;
+		case 'S':	selectionsort(array, 0, size);   	break;
+	}
+	var tt = performance.now() - t0;
+	
+	var state = array.isOrdered() ? "(correct) " : "(wrong) ";
+	if (document.querySelector("#reverse").checked) array.reverse();
+	document.querySelector("#jsoutput").innerHTML = array.join(' ');
+	document.querySelector("#jsresult").innerHTML = state + tt + "ms.";
+	return;
+}
+
+function generateNum(type) {
+	var value = parseInt(document.querySelector("#value").value);
+	var numbers = [];
+	if (type == 'grn') {
+		for (var i = 0; i < value; ++i)
+			numbers.push(Math.floor(Math.random() * value));
+	} else {
+		for (var i = 0; i < value; ++i)
+			numbers.push(i);
+		numbers.shuffle();
+	}
+	document.querySelector("#usrinput").innerHTML = numbers.join(' ');
+	return;
+}
+
+function clearOutput() {
+	document.querySelector("#jsresult").innerHTML = "";
+	document.querySelector("#jsoutput").innerHTML = "";
+	return;
+}
+
+</script>
+</head>
+<body>
+<label for='value' style="margin-left:10px;">Value </label>
+<input type="number" id='value' autocomplete="off" value=10>
+<input type="button" onclick="generateNum('grn');" value="GenerateRandomNumbers">
+<input type="button" onclick="generateNum('gnd');" value="GenerateNumbersWithoutDuplicates">
+<label for='reverse' class='indent'>ReverseOutputOrder</label>
+<input type="checkbox" id='reverse'>
+<input type="button" onclick="clearOutput();" value="ClearOutput" class='indent'>
+
+<textarea id='usrinput'>2 1 4 7 4 8 3 6 4 7</textarea>
+<p>
+<a class='nlgn' onclick="run('T');">Timsort</a>
+<a class='nlgn' onclick="run('H');">Heapsort</a>
+<a class='nlgn' onclick="run('Q');">Quicksort</a>
+<a class='nlgn' onclick="run('M');">Mergesort</a>
+<a class='nsqr' onclick="run('B');">Bubblesort</a>
+<a class='nsqr' onclick="run('I');">Insertionsort</a>
+<a class='nsqr' onclick="run('S');">Selectionsort</a>
+</p>
+<textarea id='jsoutput' readonly></textarea>
+<p id='jsresult'></p>
+</body>
+</html>
