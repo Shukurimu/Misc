@@ -67,7 +67,8 @@ Array.prototype.toIntArray = function () {
 }
 Array.prototype.isOrdered = function () {
 	var current = this[0];
-	for (var i = 1; i < this.length; ++i) {
+	var count = this.length;
+	for (var i = 1; i < count; ++i) {
 		if (current > this[i])
 			return false;
 		current = this[i];
