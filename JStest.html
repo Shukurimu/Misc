@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html style="user-select:none; background:Black;" oncontextmenu="return false;" onkeydown="__keyEvent(event);">
+<head>
+<title>JStest</title>
+<style>
+textarea {
+tab-size: 4;
+font-size: 24px;
+}
+</style>
+</head>
+<body onload="__elein.focus();">
+<div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white; text-align:center;">
+<div style="cursor:pointer;" title="Click to copy the output." onclick="__copy();">KeyCode: <span>N/A</span></div>
+<textarea rows="12" cols="80" style="background:Azure;" spellcheck="false" id='input'></textarea>
+<textarea rows="8"  cols="80" style="background:Beige;" spellcheck="false" id='output' readonly></textarea>
+</div>
+<div style="position:absolute; bottom:0; right:0; padding:4px; color:Gray;">
+The code is <abbr title="Ctrl+Enter" style="text-decoration:underline;">executed</abbr> in strict mode.</div>
+<script>
+"use strict";
+function __null(o) {
+	return (o === null) ? "<null>" : o.toString();
+}
+var __stdout = "";
+/* JS utilities */
+function print() {
+	const prevLength = __stdout.length;
+	if (arguments.length) {
+		var output = __null(arguments[0]);
+		for (var i = 1; i < arguments.length; ++i)
+			output = output.replace(new RegExp("\\{" + (i - 1) + "\\}", "g"), __null(arguments[i]));
+		__stdout  += output;
+	}
+	return (__stdout.length - prevLength);
+}
+function println() {
+	const l = print.apply(this, arguments);
+	__stdout += "\n";
+	return (l + 1);
+}
+function __q(array, lo, hi) {
+	if (lo + 1 >= hi)	return;
+	const pv = (function(a, i, j) {
+		const pivot = a[i--];
+		while (true) {
+			while (a[++i] < pivot);
+			while (a[--j] > pivot);
+			if (i >= j)
+				return j;
+			const t = a[i];
+			a[i] = a[j];
+			a[j] = t;
+		}
+	}) (array, lo, hi) + 1;
+	__q(array, lo, pv);
+	__q(array, pv, hi);
+	return;
+}
+function qsort(array, lo, hi) {
+	if (!Array.isArray(array))
+		window.alert("qsort: InputIsNotAnArray");
+	else if (arguments.length == 1)
+		__q(array,  0, array.length);
+	else if (arguments.length == 2)
+		__q(array, lo, array.length);
+	else if (arguments.length == 3)
+		__q(array, lo, hi);
+	else
+		window.alert("qsort: InvalidArgumentLength");
+	return;
+}
+Array.prototype.qsort = function() {
+	__q(this, 0, this.length);
+	return this;
+};
+Array.prototype.max = function() {
+	return Math.max.apply(null, this);
+}
+Array.prototype.min = function() {
+	return Math.min.apply(null, this);
+}
+Array.prototype.sum = function() {
+	var x1 = 0;
+	const nans = [];
+	const arrayLength = this.length;
+	for (var i = 0; i < arrayLength; ++i) {
+		if (Number.isFinite(this[i]))
+			x1 += this[i];
+		else
+			nans.push(__null(this[i]));
+	}
+	if (nans.length != 0)
+		window.alert("Array.sum: The following elements are considered as 0\n" + nans.join(', '));
+	return x1;
+}
+Array.prototype.avg = function() {
+	return this.sum() / this.length;
+}
+Array.prototype.var = function() {
+	var x1 = 0.0;
+	var x2 = 0.0;
+	const nans = [];
+	const arrayLength = this.length;
+	for (var i = 0; i < arrayLength; ++i) {
+		if (Number.isFinite(this[i])) {
+			x1 += this[i];
+			x2 += this[i] ** 2;
+		} else
+			nans.push(__null(this[i]));
+	}
+	if (nans.length != 0)
+		window.alert("Array.var: The following elements are considered as 0\n" + nans.join(', '));
+	return (x2 / arrayLength - (x1 / arrayLength) ** 2);
+}
+Array.prototype.std = function() {
+	return Math.sqrt(this.var());
+}
+Array.prototype.swap = function(i, j) {
+	if (arguments.length != 2) {
+		window.alert("Array.swap: InvalidArguments");
+	} else if (!Number.isInteger(i) || !Number.isInteger(j)) {
+		window.alert("Array.swap: NonIntegerIndex (" + i + " or " + j + ")");
+	} else if (i >= this.length || j >= this.length || i < 0 || j < 0) {
+		window.alert("Array.swap: IndexOutOfBound (" + i + " or " + j + ")");
+	} else {
+		const t = this[i];
+		this[i] = this[j];
+		this[j] = t;
+	}
+	return this;
+}
+Array.prototype.shuffle = function() {
+	this.sort(function(a, b) { return 0.5 - Math.random(); });
+	return this;
+}
+Array.prototype.l1norm = function() {
+	var x1 = 0.0;
+	const nans = [];
+	const arrayLength = this.length;
+	for (var i = 0; i < arrayLength; ++i) {
+		if (Number.isFinite(this[i]))
+			x1 += Math.abs(this[i]);
+		else
+			nans.push(__null(this[i]));
+	}
+	if (nans.length != 0)
+		window.alert("Array.l1norm: The following elements are considered as 0\n" + nans.join(', '));
+	return x1;
+}
+Array.prototype.l2norm = function() {
+	var x2 = 0.0;
+	const nans = [];
+	const arrayLength = this.length;
+	for (var i = 0; i < arrayLength; ++i) {
+		if (Number.isFinite(this[i]))
+			x2 += this[i] ** 2;
+		else
+			nans.push(__null(this[i]));
+	}
+	if (nans.length != 0)
+		window.alert("Array.l2norm: The following elements are considered as 0\n" + nans.join(', '));
+	return Math.sqrt(x2);
+}
+Math.square = function(x) {
+	return Number.isFinite(x) ? (x ** 2) : Number.NaN;
+}
+function pyrange(start, stop, step=1) {
+	switch (arguments.length) {
+		case 3:
+			if (step === 0)
+				window.alert("pyrange: step cannot be 0");
+			else if ((stop > start) ^ (step > 0))
+				window.alert("pyrange: step value error");
+			else if (!Number.isFinite(start) || !Number.isFinite(stop) || !Number.isFinite(step))
+				window.alert("pyrange: InvalidArguments");
+			else
+				break;
+			return 0;
+		case 1:
+			stop = start;
+			start = 0;
+		case 2:
+			if (Number.isFinite(stop) && Number.isFinite(start)) {
+				if (stop < start)
+					step = -1;
+				break;
+			}
+		default:
+			window.alert("pyrange: InvalidArguments");
+			return 0;
+	}
+	const newArray = [];
+	if (start < stop)
+		for (var i = start; i < stop; i += step)
+			newArray.push(i);
+	else
+		for (var i = start; i > stop; i += step)
+			newArray.push(i);
+	return newArray;
+}
+function randInt(minValue, maxValue) {
+	switch (arguments.length) {
+		case 1:
+			maxValue = minValue;
+			minValue = 0;
+		case 2:
+			if (Number.isInteger(maxValue) && Number.isInteger(minValue))
+				return Math.floor(Math.random() * (maxValue - minValue)) + minValue;
+	}
+	window.alert("randInt: InvalidArguments");
+	return 0;
+}
+/* execute */
+const __eleout = document.querySelector("#output");
+const __elein  = document.querySelector("#input");
+const __elekey = document.querySelector("span");
+function __keyEvent(e) {
+	__elekey.innerHTML = e.keyCode.toString();
+	if (e.ctrlKey && e.keyCode === 13) {
+		__stdout = "";
+		try {
+			eval("'use strict';" + __elein.value);
+		} catch (err) {
+			window.alert(err);
+		}
+		__eleout.value = __stdout;
+		__eleout.scrollTop = 0;
+		e.preventDefault();
+	} else if (e.keyCode === 9) {
+		const buff = __elein.value;
+		const cpos = __elein.selectionStart;
+		__elein.value = buff.substring(0, cpos) + '\t' + buff.substring(__elein.selectionEnd);
+		__elein.selectionStart = __elein.selectionEnd = cpos + 1;
+		e.preventDefault();
+	}
+}
+function __copy() {
+	__eleout.select();
+	document.execCommand("Copy");
+}
+</script>
+</body>
+</html>
