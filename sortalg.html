@@ -102,9 +102,9 @@ Array.prototype.reverse = function () {
 function heapsort(array, count) {
 	function siftDown(a, lo, hi) {
 		var focus = lo;
-		while (focus * 2 < hi) {
+		while (focus * 2 + 1 < hi) {
 			var index = focus;
-			var child = focus * 2;
+			var child = focus * 2 + 1;
 			// check
 			if (a[focus] < a[child])
 				index = child;
@@ -121,7 +121,7 @@ function heapsort(array, count) {
 		return;
 	}
 	// heapify
-	var curr = Math.floor((count - 1) / 2);
+	var curr = Math.floor(count / 2 - 1);
 	while (curr >= 0)
 		siftDown(array, curr--, count);
 	// reorder
@@ -556,6 +556,7 @@ function run(method) {
 		case 'B':	bubblesort(array, 0, size);      	break;
 		case 'I':	insertionsort(array, 0, size, 0);	break;
 		case 'S':	selectionsort(array, 0, size);   	break;
+		case 'D':	array.sort(function(a, b) { return a - b; });break;
 	}
 	var tt = performance.now() - t0;
 	
@@ -604,6 +605,7 @@ function clearOutput() {
 <a class='nlgn' onclick="run('H');">Heapsort</a>
 <a class='nlgn' onclick="run('Q');">Quicksort</a>
 <a class='nlgn' onclick="run('M');">Mergesort</a>
+<a class='nlgn' onclick="run('D');">JSdefaultSort</a>
 <a class='nsqr' onclick="run('B');">Bubblesort</a>
 <a class='nsqr' onclick="run('I');">Insertionsort</a>
 <a class='nsqr' onclick="run('S');">Selectionsort</a>
