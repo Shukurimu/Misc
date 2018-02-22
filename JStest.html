@@ -1,11 +1,13 @@
 <!DOCTYPE html>
-<html style="user-select:none; background:Black;" oncontextmenu="return false;">
+<html style="user-select:none; -moz-user-select:none; background:Black;" oncontextmenu="return false;">
 <head>
 <title>JStest</title>
 <style>
 textarea {
+	-moz-tab-size: 4;
 	tab-size: 4;
 	font-size: 24px;
+	font-family: Consolas;
 }
 #tips {
 	position: fixed;
@@ -51,14 +53,14 @@ textarea {
 let __newdef = [];
 let __stdout = "";
 /* JS utilities */
-const __null = function(o) {
-	return (o === null) ? "<null>" : o.toString();
+const __escape = function(o) {
+	return (o === undefined) ? "<undefined>" : (o === null) ? "<null>" : o.toString();
 };
 __newdef.push("print([args...]) / println([args...])");
 const print = function() {
 	const prevLength = __stdout.length;
 	if (arguments.length) {
-		const args = Array.from(arguments, __null);
+		const args = Array.from(arguments, __escape);
 		let output = args[0];
 		for (let i = 1; i < arguments.length; ++i)
 			output = output.replace(new RegExp("\\{" + (i - 1) + "\\}", "g"), args[i]);
@@ -121,7 +123,7 @@ Array.prototype.sum = function() {
 		if (Number.isFinite(this[i]))
 			x1 += this[i];
 		else
-			nans.push(__null(this[i]));
+			nans.push(__escape(this[i]));
 	}
 	if (nans.length != 0)
 		window.alert("Array.prototype.sum: Some elements are ignored\n" + nans.join(', '));
@@ -142,7 +144,7 @@ Array.prototype.var = function() {
 			x1 += this[i];
 			x2 += this[i] ** 2;
 		} else
-			nans.push(__null(this[i]));
+			nans.push(__escape(this[i]));
 	}
 	if (nans.length != 0)
 		window.alert("Array.prototype.var: Some elements are ignored\n" + nans.join(', '));
@@ -180,7 +182,7 @@ Array.prototype.l1norm = function() {
 		if (Number.isFinite(this[i]))
 			x1 += Math.abs(this[i]);
 		else
-			nans.push(__null(this[i]));
+			nans.push(__escape(this[i]));
 	}
 	if (nans.length != 0)
 		window.alert("Array.prototype.l1norm: Some elements are ignored\n" + nans.join(', '));
@@ -195,7 +197,7 @@ Array.prototype.l2norm = function() {
 		if (Number.isFinite(this[i]))
 			x2 += this[i] ** 2;
 		else
-			nans.push(__null(this[i]));
+			nans.push(__escape(this[i]));
 	}
 	if (nans.length != 0)
 		window.alert("Array.prototype.l2norm: Some elements are ignored\n" + nans.join(', '));
@@ -371,16 +373,18 @@ const __elefd1 = document.querySelector("#output");
 const __elefd0 = document.querySelector("#input");
 const __elelen = document.querySelector("#slen");
 const __elekey = document.querySelector("#code");
-window.onkeydown = function __keyEvent(e) {
+window.onkeydown = function(e) {
 	__elekey.innerHTML = e.keyCode.toString();
 	if (e.ctrlKey && e.keyCode === 13) {
 		__stdout = "";
 		try {
 			(new Function("'use strict';" + __elefd0.value))();
-		} catch (err) {
-			window.alert(err);
+			__elefd1.value = __stdout;
+			__elefd1.style.backgroundColor = "Beige";
+		} catch (__stderr) {
+			__elefd1.value = __stderr;
+			__elefd1.style.backgroundColor = "Pink";
 		}
-		__elefd1.value = __stdout;
 		__elefd1.scrollTop = 0;
 		e.preventDefault();
 	} else if (e.keyCode === 9) {
@@ -393,7 +397,9 @@ window.onkeydown = function __keyEvent(e) {
 		window.alert("Ctrl+S has no meaning here.");
 		e.preventDefault();
 	}
-	setTimeout(function() { __elelen.innerHTML = __elefd0.value.length.toString(); }, 0);
+};
+window.onkeyup = function() {
+	__elelen.innerHTML = __elefd0.value.length.toString();
 };
 const __resize = function() {
 	__elefd0.style.width = __elefd1.style.width = (window.innerWidth * 0.8) + "px";
