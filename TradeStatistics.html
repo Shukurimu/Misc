@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>目標市場貿易統計</title>
+<meta charset="utf-8" />
+<style>
+textarea {
+	background: Beige;
+	width: 96%;
+}
+span {
+	cursor: pointer;
+	font-size: 32px;
+	padding: 4px 12px;
+	border: 1px solid Aquamarine;
+	border-radius: 2px;
+}
+p {
+	text-align: left;
+}
+td {
+	padding: 10px;
+}
+b {
+	font-size: 120%;
+}
+</style>
+</head>
+
+<body style="background:black; color:white;">
+請將下列Excel檔案之指定分頁另存為 <em>Unicode文字檔(.txt)</em> 後傳入執行
+<table style="width:99%; text-align:center;">
+<tbody>
+<tr>
+<td id='hbase'>
+<p><b>財政部簡表</b> World<br /><small>(請增加小數點2位數以提高精確度)</small><br />
+<input type='file' accept='text/plain' onchange="loadFile(event, 0);" /></p>
+<p><b>單月出口檔</b> 第一層貨品資料_1<br />
+<input type='file' accept='text/plain' onchange="loadFile(event, 1);" /></p>
+<p><b>單月進口檔</b> 第一層貨品資料_1<br />
+<input type='file' accept='text/plain' onchange="loadFile(event, 2);" /></p>
+<p><b>累月出口檔</b> 第一層貨品資料_1<br />
+<input type='file' accept='text/plain' onchange="loadFile(event, 3);" /></p>
+<p><b>累月進口檔</b> 第一層貨品資料_1<br />
+<input type='file' accept='text/plain' onchange="loadFile(event, 4);" /></p>
+<hr />
+<p>財政部簡表金額單位<br />
+<input type="number" id='Iunit' autocomplete="off" value="1000000" min="1" /></p>
+<p>輸出小數點位數<br />
+<input type="number" id='digit' autocomplete="off" value="3" min="1" max="7" /></p>
+</td>
+<td style="width:40%"><textarea id='objNew' readonly></textarea></td>
+<td style="width:40%"><textarea id='objOld' readonly></textarea></td>
+</tr>
+<tr>
+<td><span onclick="execute();">Execute</span></td>
+<td><span onclick="copyText(objNew);" title="選取並複製">本年資料</span></td>
+<td><span onclick="copyText(objOld);" title="選取並複製">歷史資料</span></td>
+</tr>
+</tbody>
+</table>
+
+<script>
+"use strict";
+/* for early IE */
+Array.prototype.includes = Array.prototype.includes || function(e) {
+	for (let i = 0; i < this.length; ++i)
+		if (this[i] === e)
+			return true;
+	return false;
+};
+
+const parseValue = function(origin) {
+	let v = parseFloat(origin.trim().replace(/[,"]/g, ""));
+	return isNaN(v) ? 0 : v;
+};
+
+const objNew = document.querySelector("#objNew");
+const objOld = document.querySelector("#objOld");
+const colName = ["", "單月出口", "單月進口", "累月出口", "累月進口"];
+const execute = function() {
+	objNew.value = objOld.value = "";
+	if (fileContents.includes(null)) {
+		window.alert("請選擇檔案");
+		return;
+	}
+	let Iunit = parseInt(document.querySelector("#Iunit").value);
+	let digit = parseInt(document.querySelector("#digit").value);
+	const newDict = { "id": "本年" };
+	newStatistics(0, newDict);
+	const oldDict = { "id": "歷史" };
+	oldStatistics(1, oldDict, colName[1], Iunit);
+	oldStatistics(2, oldDict, colName[2], Iunit);
+	oldStatistics(3, oldDict, colName[3], Iunit);
+	oldStatistics(4, oldDict, colName[4], Iunit);
+	objNew.value = outputAsTable(newDict, digit);
+	objOld.value = outputAsTable(oldDict, digit);
+	return;
+};
+
+const fileContents = [null, null, null, null, null];
+const loadFile = function(event, index) {
+	const fileReader = new FileReader();
+	fileReader.onload = function() {
+		fileContents[index] = fileReader.result;
+	};
+	fileReader.readAsText(event.target.files[0]);
+};
+
+const additionalGroup = {
+	"新南向政策18國": ["印尼", "菲律賓", "泰國", "馬來西亞", "新加坡", "汶萊", "越南", "緬甸", "柬埔寨", "寮國", "印度", "巴基斯坦", "孟加拉", "尼泊爾", "斯里蘭卡", "不丹", "澳大利亞", "紐西蘭"],
+	"中國大陸與香港": ["中國大陸", "香港"]
+};
+
+const newStatistics = function(fileIndex, dictionary) {
+	const array = fileContents[fileIndex].split('\n');
+	const _AAAA = {};
+	const other = {};
+	/* initialization */
+	for (let k = 1; k < colName.length; ++k) {
+		_AAAA[colName[k]] = 0;
+		for (let o in additionalGroup) {
+			if (!other.hasOwnProperty(o))
+				other[o] = {};
+			other[o][colName[k]] = 0;
+		}
+	}
+	/* start from line 6 */
+	for (let i = 5; i < array.length; ++i) {
+		const data = array[i].split('\t');
+		/** index
+		0. SerialNumber.
+		1. Chinese
+		2. English
+		3. 單月出口
+		4. 單月進口
+		5. 單月出入超
+		6. 累月出口
+		7. 累月進口
+		8. 累月出入超
+		*/
+		if (isNaN(parseInt(data[0])))
+			continue;
+		_AAAA[colName[1]] += (data[3] = parseValue(data[3]));
+		_AAAA[colName[2]] += (data[4] = parseValue(data[4]));
+		_AAAA[colName[3]] += (data[6] = parseValue(data[6]));
+		_AAAA[colName[4]] += (data[7] = parseValue(data[7]));
+		
+		let currObject = {};
+		currObject[colName[1]] = data[3];
+		currObject[colName[2]] = data[4];
+		currObject[colName[3]] = data[6];
+		currObject[colName[4]] = data[7];
+		dictionary[data[1]] = currObject;
+		for (let o in additionalGroup) {
+			if (additionalGroup[o].includes(data[1])) {
+				other[o][colName[1]] += data[3];
+				other[o][colName[2]] += data[4];
+				other[o][colName[3]] += data[6];
+				other[o][colName[4]] += data[7];
+			}
+		}
+	}
+	/* insert keys */
+	dictionary["全球"] = _AAAA;
+	for (let o in additionalGroup)
+		dictionary[o] = other[o];
+	return;
+};
+
+const oldStatistics = function(fileIndex, dictionary, fieldName, Iunit) {
+	const array = fileContents[fileIndex].split('\n');
+	const other = {};
+	/* initialization */
+	for (let o in additionalGroup)
+		other[o] = 0;
+	/* start from line 5 */
+	for (let i = 4; i < array.length; ++i) {
+		const data = array[i].split('\t');
+		/** index
+		0. CountryCode
+		1. Condition
+		2. Value
+		*/
+		if (data[0].length == 0)
+			continue;
+		let entry = code2name[data[0]];
+		if (entry === undefined) {
+			window.alert("找不到代碼" + data[0]);
+			continue;
+		}
+		if (!dictionary.hasOwnProperty(entry))
+			dictionary[entry] = {};
+		dictionary[entry][fieldName] = (data[2] = parseValue(data[2]) / Iunit);
+		for (let o in additionalGroup) {
+			if (additionalGroup[o].includes(entry))
+				other[o] += data[2];
+		}
+	}
+	/* insert keys */
+	for (let o in additionalGroup) {
+		if (!dictionary.hasOwnProperty(o))
+			dictionary[o] = {};
+		dictionary[o][fieldName] = other[o];
+	}
+	return;
+};
+
+const outputAsTable = function(dictionary, digit) {
+	const request = ["全球", "中國大陸與香港", "中國大陸", "美國", "德國", "印尼", "菲律賓", "泰國", "馬來西亞", "越南", "印度", "新加坡", "汶萊", "緬甸", "柬埔寨", "寮國", "巴基斯坦", "孟加拉", "尼泊爾", "斯里蘭卡", "不丹", "澳大利亞", "紐西蘭", "新南向政策18國"];
+	let unseen = [];
+	let result = colName.join("\t") + "\n";
+	for (let i = 0; i < request.length; ++i) {
+		const itemName = request[i];
+		if (dictionary.hasOwnProperty(itemName)) {
+			let currString = itemName;
+			for (let j = 1; j < 5; ++j)
+				currString += "\t" + (dictionary[itemName][colName[j]] || 0.0).toFixed(digit);
+			result += currString + "\n";
+		} else {
+			unseen.push(itemName);
+		}
+	}
+	if (unseen.length > 0)
+		window.alert(dictionary["id"] + "資料中找不到以下欄位\n" + unseen.join(", "));
+	return result;
+};
+
+const code2name = {};
+window.onload = function() {
+	objNew.style.height = objOld.style.height = document.querySelector("#hbase").clientHeight + "px";
+	const dataArray =
+	"AAAA:全球,018:新南向政策18國,B0:東南亞國協,AD:安道爾,AE:阿拉伯聯合大公國,AF:阿富汗,AG:安地卡及巴布達,AI:英屬安圭拉,AL:阿爾巴尼亞,AM:亞美尼亞,AN:荷屬安地列斯,AO:安哥拉,AQ:南極洲,AR:阿根廷,AS:美屬薩摩亞,AT:奧地利,AU:澳大利亞,AW:阿魯巴,AZ:亞塞拜然,BA:波士尼亞,BB:巴貝多,BD:孟加拉,BE:比利時,BF:布吉納法索,BG:保加利亞,BH:巴林,BI:浦隆地,BJ:貝南,BM:百慕達,BN:汶萊,BO:玻利維亞,BR:巴西,BS:巴哈馬,BT:不丹,BV:波維特島,BW:波札那,BY:白俄羅斯,BZ:貝里斯,CA:加拿大,CC:可可斯群島,CF:中非,CG:剛果,CH:瑞士,CI:象牙海岸,CK:科克群島,CL:智利,CM:喀麥隆,CN:中國大陸,CO:哥倫比亞,CR:哥斯大黎加,CU:古巴,CV:維德角島,CX:聖誕島,CY:賽普勒斯,CZ:捷克,DE:德國,DJ:吉布地,DK:丹麥,DM:多米尼克,DO:多明尼加,DZ:阿爾及利亞,EC:厄瓜多,EE:愛沙尼亞,EG:埃及,EH:西撒哈拉,ER:厄利垂亞,ES:西班牙,ET:依索比亞,FI:芬蘭,FJ:斐濟群島,FK:福克蘭群島,FM:密克羅尼西亞,FO:法羅群島,FR:法國,FX:法國本土,GA:加彭,GB:英國,GD:格瑞那達,GE:喬治亞,GF:法屬圭亞那,GH:迦納,GI:直布羅陀,GL:格凌蘭,GM:甘比亞,GN:幾內亞,GP:瓜德魯普島,GQ:赤道幾內亞,GR:希臘,GS:南喬治亞及南桑威奇群島,GT:瓜地馬拉,GU:關島,GW:幾內亞比索,GY:蓋亞那,HK:香港,HM:赫德及麥當勞群島,HN:宏都拉斯,HR:克羅埃西亞,HT:海地,HU:匈牙利,ID:印尼,IE:愛爾蘭,IL:以色列,IN:印度,IO:英屬印度洋地區,IQ:伊拉克,IR:伊朗,IS:冰島,IT:義大利,JM:牙買加,JO:約旦,JP:日本,KE:肯亞,KG:吉爾吉斯,KH:柬埔寨,KI:吉里巴斯,KM:葛摩,KN:聖克里斯多福,KP:北韓,KR:韓國,KW:科威特,KY:開曼群島,KZ:哈薩克,LA:寮國,LB:黎巴嫩,LC:聖露西亞,LI:列支敦斯登,LK:斯里蘭卡,LR:賴比瑞亞,LS:賴索托,LT:立陶宛,LU:盧森堡,LV:拉脫維亞,LY:利比亞,MA:摩洛哥,MC:摩納哥,MD:摩爾多瓦,MG:馬達加斯加,MH:馬紹爾群島,MK:馬其頓,ML:馬利,MM:緬甸,MN:蒙古,MO:澳門,MP:北馬里亞納群島,MQ:法屬馬丁尼克,MR:茅利塔尼亞,MS:蒙瑟拉特島,MT:馬爾他,MU:模里西斯,MV:馬爾地夫,MW:馬拉威,MX:墨西哥,MY:馬來西亞,MZ:莫三比克,NA:納米比亞,NC:新喀里多尼亞島,NE:尼日,NF:諾福克群島,NG:奈及利亞,NI:尼加拉瓜,NL:荷蘭,NO:挪威,NP:尼泊爾,NR:諾魯,NT:中立區,NU:紐威島,NZ:紐西蘭,OM:阿曼,PA:巴拿馬,PE:祕魯,PF:法屬玻里尼西亞,PG:巴布亞紐幾內亞,PH:菲律賓,PK:巴基斯坦,PL:波蘭,PM:聖匹及密啟倫群島,PN:皮特康島,PR:波多黎各,PT:葡萄牙,PW:帛琉群島,PY:巴拉圭,QA:卡達,RE:留尼旺,RO:羅馬尼亞,RU:俄羅斯,RW:盧安達,SA:沙烏地阿拉伯,SB:索羅門群島,SC:塞席爾,SD:蘇丹,SE:瑞典,SG:新加坡,SH:聖赫勒拿島,SI:斯洛維尼亞,SJ:斯瓦巴及尖棉島,SK:斯洛伐克,SL:獅子山,SM:聖馬利諾,SN:塞內加爾,SO:索馬利亞,SR:蘇利南,ST:聖多美及普林西比,SU:前蘇聯,SV:薩爾瓦多,SY:敘利亞,SZ:史瓦濟蘭,TC:土克斯及開科斯群島,TD:查德,TF:法屬南部屬地,TG:多哥,TH:泰國,TJ:塔吉克,TK:托克勞群島,TM:土庫曼,TN:突尼西亞,TO:東加,TP:帝汶,TR:土耳其,TT:千里達,TV:吐瓦魯,TZ:坦尚尼亞,UA:烏克蘭,UG:烏干達,UM:美屬邊疆群島,US:美國,UY:烏拉圭,UZ:烏茲別克,VA:教廷,VC:聖文森,VE:委內瑞拉,VG:英屬維爾京群島,VI:美屬維爾京群島,VN:越南,VU:萬那杜,WF:沃里斯與住塔那島,WS:薩摩亞群島,XA:琉球,XB:納維斯,XC:大溪地,XD:其他亞洲國家,XE:其他中東及近東國家,XF:其他歐洲國家,XG:其他非洲國家,XH:其他北美洲國家,XI:其他中美洲國家,XJ:其他南美洲國家,XK:其他大洋洲國家,XL:未列名法屬中美州領域,XM:未列名美屬中美州領域,XN:未列名美屬太平洋領域,XO:未列名英屬中美洲領域,YE:葉門,YT:美亞特,YU:南斯拉夫聯邦共和國,ZA:南非,ZM:尚比亞,ZR:薩伊,ZW:辛巴威,ZZ:其他國家,CD:剛果民主共和國,TL:東帝汶,RS:塞爾維亞,ME:蒙特內哥羅,PS:巴勒斯坦,AX:奧蘭群島,JE:澤西,IM:曼島,GG:格恩西島,SS:南蘇丹".split(',');
+	for (let i = 0; i < dataArray.length; ++i) {
+		let s = dataArray[i];
+		let kvIndex = s.indexOf(":");
+		let code = s.substring(0, kvIndex);
+		let name = s.substring(kvIndex +1);
+		code2name[code] = name;
+	}
+};
+
+const copyText = function(elem) {
+	elem.select();
+	document.execCommand("Copy");
+};
+</script>
+</body>
+</html>
