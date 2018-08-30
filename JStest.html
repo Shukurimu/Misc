@@ -271,6 +271,38 @@ __newdef.push("String.prototype.count(regex)");
 String.prototype.count = function(regex) {
 	return (this.match(new RegExp(regex, "g")) || []).length;
 };
+__newdef.push("String.prototype.join([token='AntSymbol'])");
+String.prototype.join = function(token) {
+	return this.split("").join(token ? token : "\u0489");
+};
+__newdef.push("String.prototype.toCode([allChars=false])");
+String.prototype.toCode = function(allChars) {
+	let Char = this.split("");
+	let Code = "";
+	for (let i = 0; i < Char.length; ++i) {
+		let x = Number(Char[i].charCodeAt(0));
+		if (x > 127 || allChars) {
+			let charAscii = x.toString(16);
+			Code += "\\u" + "0000".substring(charAscii.length, 4) + charAscii;
+		} else {
+			Code += Char[i];
+		}
+	}
+	return Code;
+};
+__newdef.push("String.prototype.toChar()");
+String.prototype.toChar = function() {
+	let Code = this.split("\\u");
+	let Char = Code[0];
+	for (let i = 1; i < Code.length; ++i) {
+		let x = Code[i];
+		Char += String.fromCharCode(parseInt("0x" + x.substring(0, 4)));
+		if (x.length > 4) {
+			Char += x.substring(4, x.length);
+		}
+	}
+	return Char;
+};
 __newdef.push("Math.fact(n)");
 Math.fact = function(n) {
 	if ((arguments.length == 1) && Number.isInteger(n) && (n >= 0)) {
@@ -410,6 +442,8 @@ window.onresize = __resize;
 document.querySelector("#tips").onclick = function() {
 	__elefd1.select();
 	document.execCommand("Copy");
+	let c = __elefd1.selectionEnd - __elefd1.selectionStart;
+	__elekey.innerHTML = "(Copied " + c + " characters.)";
 };
 __newdef.forEach(function(s) {
 	let o = document.createElement("li");
