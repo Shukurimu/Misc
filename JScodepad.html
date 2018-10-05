@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html style="user-select:none; -moz-user-select:none; background:Black;" oncontextmenu="return false;">
+<head>
+<title>JS Codepad</title>
+<style>
+textarea {
+	-moz-tab-size: 4;
+	tab-size: 4;
+	font-size: 24px;
+	font-family: Consolas;
+}
+#tips {
+	position: fixed;
+	bottom: 6px;
+	right: 6px;
+	color: Gray;
+	cursor: pointer;
+}
+#newDefined {
+	color: Gray;
+	border: 2px solid Aqua;
+	position: fixed;
+	padding: 4px;
+	left: 0;
+	bottom: 0;
+	background: Black;
+}
+#enum {
+	color: White;
+	font-family: Verdana;
+	display: none;
+	padding-right: 20px;
+}
+#newDefined:hover {
+	border-color: Red;
+}
+#newDefined:hover #enum {
+	display: block;
+}
+</style>
+</head>
+<body onload="__resize(); __elefd0.focus();">
+<div style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); color:white;">
+<div>KeyCode: <span id='code'>N/A</span></div>
+<textarea style="background:Azure;" spellcheck="false" id='input'></textarea>
+<div>SourceLength: <span id='slen'>0</span></div>
+<textarea style="background:Beige;" spellcheck="false" id='output' readonly></textarea>
+</div>
+<div id='newDefined'><ul id='enum'></ul>NewDefinedFunctions</div>
+<div id='tips' title="Select and Copy the output">[Ctrl+Enter] The code is executed in strict mode.</div>
+<script>
+"use strict";
+let __newdef = [];
+let __stdout = "";
+/* JS utilities */
+const __escape = function(o) {
+	return (o === undefined) ? "<undefined>" : (o === null) ? "<null>" : o.toString();
+};
+__newdef.push("print([args...]) / println([args...])");
+const print = function() {
+	const prevLength = __stdout.length;
+	if (arguments.length) {
+		const args = Array.from(arguments, __escape);
+		let output = args[0];
+		for (let i = 1; i < arguments.length; ++i)
+			output = output.replace(new RegExp("\\{" + (i - 1) + "\\}", "g"), args[i]);
+		__stdout  += output;
+	}
+	return (__stdout.length - prevLength);
+};
+const println = function() {
+	const l = print.apply(null, arguments);
+	__stdout += "\n";
+	return (l + 1);
+};
+const __q = function(array, lo, hi) {
+	if (lo + 1 >= hi)	return;
+	const pv = (function(a, i, j) {
+		const pivot = a[i--];
+		while (true) {
+			while (a[++i] < pivot);
+			while (a[--j] > pivot);
+			if (i >= j)
+				return j;
+			a.swap(i, j);
+		}
+	}) (array, lo, hi) + 1;
+	__q(array, lo, pv);
+	__q(array, pv, hi);
+};
+__newdef.push("qsort(array[, from=0[, to=array.length]])");
+const qsort = function(array, lo, hi) {
+	if (!Array.isArray(array))
+		throw ("qsort: InputIsNotAnArray");
+	else if (arguments.length == 1)
+		__q(array,  0, array.length);
+	else if (arguments.length == 2)
+		__q(array, lo, array.length);
+	else if (arguments.length == 3)
+		__q(array, lo, hi);
+	else
+		throw ("qsort: InvalidArgumentLength");
+};
+__newdef.push("Array.prototype.qsort()");
+Array.prototype.qsort = function() {
+	__q(this, 0, this.length);
+	return this;
+};
+__newdef.push("Array.prototype.max()");
+Array.prototype.max = function() {
+	return Math.max.apply(null, this);
+};
+__newdef.push("Array.prototype.min()");
+Array.prototype.min = function() {
+	return Math.min.apply(null, this);
+};
+__newdef.push("Array.prototype.sum()");
+Array.prototype.sum = function() {
+	let x1 = 0;
+	const nans = [];
+	const arrayLength = this.length;
+	for (let i = 0; i < arrayLength; ++i) {
+		if (Number.isFinite(this[i]))
+			x1 += this[i];
+		else
+			nans.push(__escape(this[i]));
+	}
+	if (nans.length != 0)
+		window.alert("Array.prototype.sum: Some elements are ignored\n" + nans.join(', '));
+	return x1;
+};
+__newdef.push("Array.prototype.avg()");
+Array.prototype.avg = function() {
+	return this.sum() / this.length;
+};
+__newdef.push("Array.prototype.var()");
+Array.prototype.var = function() {
+	let x1 = 0.0;
+	let x2 = 0.0;
+	const nans = [];
+	const arrayLength = this.length;
+	for (let i = 0; i < arrayLength; ++i) {
+		if (Number.isFinite(this[i])) {
+			x1 += this[i];
+			x2 += this[i] ** 2;
+		} else
+			nans.push(__escape(this[i]));
+	}
+	if (nans.length != 0)
+		window.alert("Array.prototype.var: Some elements are ignored\n" + nans.join(', '));
+	return (x2 / arrayLength - (x1 / arrayLength) ** 2);
+};
+__newdef.push("Array.prototype.std()");
+Array.prototype.std = function() {
+	return Math.sqrt(this.var());
+};
+__newdef.push("Array.prototype.swap(index1, index2)");
+Array.prototype.swap = function(i, j) {
+	if (arguments.length != 2) {
+		throw ("Array.prototype.swap: InvalidArguments");
+	} else if (!Number.isInteger(i) || !Number.isInteger(j)) {
+		throw ("Array.prototype.swap: NonIntegerIndex (" + i + " or " + j + ")");
+	} else if (i >= this.length || j >= this.length || i < 0 || j < 0) {
+		throw ("Array.prototype.swap: IndexOutOfBound (" + i + " or " + j + ")");
+	}
+	let tmp = this[i];
+	this[i] = this[j];
+	this[j] = tmp;
+	return this;
+};
+__newdef.push("Array.prototype.shuffle()");
+Array.prototype.shuffle = function() {
+	this.sort(function(a, b) { return 0.5 - Math.random(); });
+	return this;
+};
+__newdef.push("Array.prototype.l1norm()");
+Array.prototype.l1norm = function() {
+	let x1 = 0.0;
+	const nans = [];
+	const arrayLength = this.length;
+	for (let i = 0; i < arrayLength; ++i) {
+		if (Number.isFinite(this[i]))
+			x1 += Math.abs(this[i]);
+		else
+			nans.push(__escape(this[i]));
+	}
+	if (nans.length != 0)
+		window.alert("Array.prototype.l1norm: Some elements are ignored\n" + nans.join(', '));
+	return x1;
+};
+__newdef.push("Array.prototype.l2norm()");
+Array.prototype.l2norm = function() {
+	let x2 = 0.0;
+	const nans = [];
+	const arrayLength = this.length;
+	for (let i = 0; i < arrayLength; ++i) {
+		if (Number.isFinite(this[i]))
+			x2 += this[i] ** 2;
+		else
+			nans.push(__escape(this[i]));
+	}
+	if (nans.length != 0)
+		window.alert("Array.prototype.l2norm: Some elements are ignored\n" + nans.join(', '));
+	return Math.sqrt(x2);
+};
+__newdef.push("Array.prototype.nlargest(n)");
+Array.prototype.nlargest = function(n) {
+	const thisLength = this.length;
+	if (!Number.isInteger(n))
+		throw ("Array.prototype.nlargest: NotIntegerArgument " + n);
+	else if (n > thisLength || n < 1)
+		throw ("Array.prototype.nlargest: ArgumentOutOfBound " + n);
+	const siftDown = function(a, rt) {
+		while (rt * 2 + 1 < n) {
+			let child = rt * 2 + 1;
+			let index = rt;
+			if (a[rt] > a[child])
+				index = child;
+			if (child + 1 < n && a[index] > a[child + 1])
+				index = child + 1;
+			if (index == rt)
+				break;
+			a.swap(rt, index);
+			rt = index;
+		}
+	};
+	let heap = Array.apply(null, Array(n)).map(function(x, i) { return this[i]; }, this);
+	for (let i = ~~(n / 2 - 1); i >= 0; --i)
+		siftDown(heap, i, n);
+	for (let i = n; i < thisLength; ++i) {
+		if (heap[0] < this[i]) {
+			heap[0] = this[i];
+			siftDown(heap, 0, n);
+		}
+	}
+	return heap[0];
+};
+__newdef.push("Array.prototype.nsmallest(n)");
+Array.prototype.nsmallest = function(n) {
+	const thisLength = this.length;
+	if (!Number.isInteger(n))
+		throw ("Array.prototype.nsmallest: NotIntegerArgument (" + n + ")");
+	else if (n > thisLength || n < 1)
+		throw ("Array.prototype.nsmallest: ArgumentOutOfBound (" + n + ")");
+	const siftDown = function(a, rt) {
+		while (rt * 2 + 1 < n) {
+			let child = rt * 2 + 1;
+			let index = rt;
+			if (a[rt] < a[child])
+				index = child;
+			if (child + 1 < n && a[index] < a[child + 1])
+				index = child + 1;
+			if (index == rt)
+				break;
+			a.swap(rt, index);
+			rt = index;
+		}
+	};
+	let heap = Array.apply(null, Array(n)).map(function(x, i) { return this[i]; }, this);
+	for (let i = ~~(n / 2 - 1); i >= 0; --i)
+		siftDown(heap, i, n);
+	for (let i = n; i < thisLength; ++i) {
+		if (heap[0] > this[i]) {
+			heap[0] = this[i];
+			siftDown(heap, 0, n);
+		}
+	}
+	return heap[0];
+};
+__newdef.push("String.prototype.count(regex)");
+String.prototype.count = function(regex) {
+	return (this.match(new RegExp(regex, "g")) || []).length;
+};
+__newdef.push("String.prototype.join([token='AntSymbol'])");
+String.prototype.join = function(token) {
+	return this.split("").join(token ? token : "\u0489");
+};
+__newdef.push("String.prototype.toCode([allChars=false])");
+String.prototype.toCode = function(allChars) {
+	let Char = this.split("");
+	let Code = "";
+	for (let i = 0; i < Char.length; ++i) {
+		let x = Number(Char[i].charCodeAt(0));
+		if (x > 127 || allChars) {
+			let charAscii = x.toString(16);
+			Code += "\\u" + "0000".substring(charAscii.length, 4) + charAscii;
+		} else {
+			Code += Char[i];
+		}
+	}
+	return Code;
+};
+__newdef.push("String.prototype.toChar()");
+String.prototype.toChar = function() {
+	let Code = this.split("\\u");
+	let Char = Code[0];
+	for (let i = 1; i < Code.length; ++i) {
+		let x = Code[i];
+		Char += String.fromCharCode(parseInt("0x" + x.substring(0, 4)));
+		if (x.length > 4) {
+			Char += x.substring(4, x.length);
+		}
+	}
+	return Char;
+};
+__newdef.push("Math.fact(n)");
+Math.fact = function(n) {
+	if ((arguments.length == 1) && Number.isInteger(n) && (n >= 0)) {
+		if (n === 0)
+			return 1;
+		let x = n, s = true;
+		while (--n > 1) {
+			x *= n;
+			s &= Number.isSafeInteger(x);
+		}
+		if (!s)
+			window.alert("Math.fact: The result is not a safe integer");
+		return x;
+	} else
+		throw ("Math.fact: Arguments Error");
+};
+__newdef.push("Math.comb(n, k)");
+Math.comb = function(n, k) {
+	if ((arguments.length == 2) && Number.isInteger(n) && Number.isInteger(k) && (n >= k) && (k >= 0)) {
+		k = Math.min(k, n - k);
+		if (k === 0)
+			return 1;
+		let x = n, y = k, s = true;
+		for (let i = 1; i < k; ++i) {
+			y *= i;
+			x *= n - i;
+			s &= Number.isSafeInteger(x);
+		}
+		if (!s)
+			window.alert("Math.comb: The result is not a safe integer");
+		return x / y;
+	} else
+		throw ("Math.comb: Arguments Error");
+};
+__newdef.push("pyrange([start=0], stop[, step=1])");
+const pyrange = function(start, stop, step=1) {
+	switch (arguments.length) {
+		case 3:
+			if (step === 0)
+				throw ("pyrange: step cannot be 0");
+			else if ((stop > start) ^ (step > 0))
+				throw ("pyrange: step value error");
+			else if (!Number.isFinite(start) || !Number.isFinite(stop) || !Number.isFinite(step))
+				throw ("pyrange: InvalidArguments");
+			else
+				break;
+		case 1:
+			stop = start;
+			start = 0;
+		case 2:
+			if (Number.isFinite(stop) && Number.isFinite(start)) {
+				if (stop < start)
+					step = -1;
+				break;
+			}
+		default:
+			throw ("pyrange: InvalidArguments");
+	}
+	const newArray = [];
+	if (start < stop)
+		for (let i = start; i < stop; i += step)
+			newArray.push(i);
+	else
+		for (let i = start; i > stop; i += step)
+			newArray.push(i);
+	return newArray;
+};
+__newdef.push("randInt([[value1=0], value2=100])");
+const randInt = function(value1, value2) {
+	switch (arguments.length) {
+		case 0:
+			value1 = 100;
+		case 1:
+			value2 = value1;
+			value1 = 0;
+		case 2:
+			if (Number.isInteger(value2) && Number.isInteger(value1))
+				return Math.floor(Math.random() * (value2 - value1)) + value1;
+	}
+	throw ("randInt: InvalidArguments");
+};
+__newdef.push("class Fibo: next() toString()");
+class Fibo {
+	constructor() {
+		this.a = 0;
+		this.b = 0;
+	}
+	next() {
+		let c = (this.b === 0) ? 1 : (this.a + this.b);
+		this.a = this.b;
+		this.b = c;
+		return c;
+	}
+	toString() {
+		return this.next();
+	}
+};
+/* DOM elements */
+const __elefd1 = document.querySelector("#output");
+const __elefd0 = document.querySelector("#input");
+const __elelen = document.querySelector("#slen");
+const __elekey = document.querySelector("#code");
+window.onkeydown = function(e) {
+	__elekey.innerHTML = e.keyCode.toString();
+	if (e.ctrlKey && e.keyCode === 13) {
+		__stdout = "";
+		try {
+			(new Function("'use strict';" + __elefd0.value))();
+			__elefd1.value = __stdout;
+			__elefd1.style.backgroundColor = "Beige";
+		} catch (__stderr) {
+			__elefd1.value = __stderr;
+			__elefd1.style.backgroundColor = "Pink";
+		}
+		__elefd1.scrollTop = 0;
+		e.preventDefault();
+	} else if (e.keyCode === 9) {
+		const buff = __elefd0.value;
+		const cpos = __elefd0.selectionStart;
+		__elefd0.value = buff.substring(0, cpos) + '\t' + buff.substring(__elefd0.selectionEnd);
+		__elefd0.selectionStart = __elefd0.selectionEnd = cpos + 1;
+		e.preventDefault();
+	} else if (e.ctrlKey && e.keyCode === 83) {
+		window.alert("Ctrl+S has no meaning here.");
+		e.preventDefault();
+	}
+};
+window.onkeyup = function() {
+	__elelen.innerHTML = __elefd0.value.length.toString();
+};
+const __resize = function() {
+	__elefd0.style.width = __elefd1.style.width = (window.innerWidth * 0.8) + "px";
+	__elefd0.style.height = (window.innerHeight * 0.45) + "px";
+	__elefd1.style.height = (window.innerHeight * 0.35) + "px";
+};
+window.onresize = __resize;
+document.querySelector("#tips").onclick = function() {
+	__elefd1.select();
+	document.execCommand("Copy");
+	let c = __elefd1.selectionEnd - __elefd1.selectionStart;
+	__elekey.innerHTML = "(Copied " + c + " characters.)";
+};
+__newdef.forEach(function(s) {
+	let o = document.createElement("li");
+	o.appendChild(document.createTextNode(s));
+	this.appendChild(o);
+}, document.querySelector("#enum"));
+</script>
+</body>
+</html>
